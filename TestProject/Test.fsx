@@ -5,4 +5,3 @@ printfn "number: %d" n5.Value
 
 let i5 = n5 :> Numbers.INum
 printfn "number: %d" n5.Value
-
