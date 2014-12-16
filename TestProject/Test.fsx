@@ -1,3 +1,8 @@
 ﻿#r @"../PrimesTypeProvider/bin/Debug/PrimesTypeProvider.dll"
 
-printfn "number: %d" Numbers.N5.Value
+let n5 = Numbers.N5 ()
+printfn "number: %d" n5.Value
+
+let i5 = n5 :> Numbers.INum
+printfn "number: %d" n5.Value
+

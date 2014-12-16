@@ -1,4 +1,11 @@
 
+## how should the numbers be represented
+
+- they should implement `INum` with a single property `Value`
+- they should implement `IPrim` if they are prime
+- they should have a parameterless constructor
+
+
 ## Steps taken
 - Create a F\# lib file for the type provider
 - Followed the tutorial
