@@ -1,4 +1,9 @@
 
+## What the type provider is doing:
+- it provides two interfaces `INum` and `IPrime` into `.Numbers`
+- it provides a *Provider* `PrimesProvider` you can give a list of numbers you are interested in "1,5,13" and returns a type with the prober nested types
+- nests those types with `INum` and if it is a prime number with `IPrime` as well.
+
 ## how should the numbers be represented
 
 - they should implement `INum` with a single property `Value`

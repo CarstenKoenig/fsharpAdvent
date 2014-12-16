@@ -29,36 +29,48 @@ type PrimesProvider (config : TypeProviderConfig) as this =
     let inum      = ProvidedTypeDefinition(asm, ns, "INum", Some typeof<INum>)
     let iprime    = ProvidedTypeDefinition(asm, ns, "IPrime", Some typeof<IPrime>)
 
-    let createType (n : int) =
-        let name = sprintf "N%d" n
+    let provider =
+        let primesProvider = ProvidedTypeDefinition(asm, ns, "PrimesProvider", Some(typeof<obj>))
+        let parameters = [ProvidedStaticParameter("Numbers", typeof<string>)]
+        primesProvider.DefineStaticParameters (
+            parameters, 
+            (fun typeName args ->
+                let numbers =
+                    args.[0] :?> string
+                    |> (fun s -> s.Split([|','; ';'|]))
+                    |> List.ofArray
+                    |> List.map Int32.Parse
 
-        let num       = ProvidedTypeDefinition(asm, ns, name, Some typeof<obj>)
-        let valueProp = ProvidedProperty("Value", typeof<int>, IsStatic = false,
-                                        GetterCode = (fun args -> <@@ n @@>))
-        let ctor      = ProvidedConstructor([], InvokeCode = fun args -> <@@ () :> obj @@>)
+                let provider = ProvidedTypeDefinition(asm, ns, typeName, Some typeof<obj>, HideObjectMethods = true)
 
-        num.AddMemberDelayed(fun () -> valueProp)
-        num.AddMemberDelayed(fun () -> ctor)
+                let createType (n : int) =
+                    let delay () =
+                        let name = sprintf "N%d" n
 
-        let interfaces () =
-            if isPrime n 
-            then [inum :> Type; iprime :> Type]
-            else [inum :> Type]
+                        let num       = ProvidedTypeDefinition(name, Some typeof<obj>)
+                        let valueProp = ProvidedProperty("Value", typeof<int>, IsStatic = false,
+                                                        GetterCode = (fun args -> <@@ n @@>))
+                        let ctor      = ProvidedConstructor([], InvokeCode = fun args -> <@@ () :> obj @@>)
 
-        num.AddInterfaceImplementationsDelayed(interfaces)
+                        num.AddMemberDelayed(fun () -> valueProp)
+                        num.AddMemberDelayed(fun () -> ctor)
 
-        num
+                        let interfaces () =
+                            if isPrime n 
+                            then [inum :> Type; iprime :> Type]
+                            else [inum :> Type]
 
-    let createTypes (upTo : int) =
+                        num.AddInterfaceImplementationsDelayed(interfaces)
+                        num
+                    provider.AddMemberDelayed delay
 
-        let numbers =
-            [1 .. upTo]
-            |> List.map createType
-
-        [inum; iprime] @ numbers
+                numbers |> Seq.iter createType
+                provider
+            ))
+        primesProvider
 
     do
-        this.AddNamespace(ns, createTypes(100))
+        this.AddNamespace(ns, [inum; iprime; provider])
 
 [<assembly:TypeProviderAssembly>]
 do ()
