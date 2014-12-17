@@ -10,13 +10,11 @@ open ProviderImplementation.ProvidedTypes
 
 [<InterfaceAttribute>]
 type INum =
-    interface
-    end
-
+    abstract GetValue : unit -> int
+   
 [<InterfaceAttribute>]
 type IPrime =
     inherit INum
-
 
 [<AutoOpen>]
 module NumberOperations =
@@ -50,6 +48,17 @@ type NumbersProvider (config : TypeProviderConfig) as this =
                                          GetterCode = (fun args -> <@@ n @@>))
         numberType.AddMemberDelayed (fun () -> valueProp)
 
+        let igetMeth = typeof<INum>.GetMethod "GetValue"
+        let getV = 
+            let code (_args: Expr list) = <@@ n @@>
+            let m = ProvidedMethod("GetValue", [ ], typeof<int>, InvokeCode=code) 
+            m.SetMethodAttrs(MethodAttributes.Virtual ||| MethodAttributes.HasSecurity ||| MethodAttributes.Final ||| MethodAttributes.NewSlot ||| MethodAttributes.Private)
+            m
+        numberType.AddInterfaceImplementation typeof<INum>
+        numberType.DefineMethodOverride(getV, igetMeth)
+        numberType.AddMembers [ (getV :> MemberInfo) ]
+
+
     let addNumberType (toType : ProvidedTypeDefinition) (n : int) =
         let typeName = sprintf "N%d" n
         let numberType = 
@@ -58,7 +67,6 @@ type NumbersProvider (config : TypeProviderConfig) as this =
 
         if isPrime n
         then numberType.AddInterfaceImplementation typeof<IPrime>
-        else numberType.AddInterfaceImplementation typeof<INum>
 
         addValueProperty numberType n
         toType.AddMemberDelayed (fun () -> numberType)
