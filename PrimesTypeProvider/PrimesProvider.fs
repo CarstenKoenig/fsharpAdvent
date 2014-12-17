@@ -50,23 +50,35 @@ type NumbersProvider (config : TypeProviderConfig) as this =
                                          GetterCode = (fun args -> <@@ n @@>))
         numberType.AddMemberDelayed (fun () -> valueProp)
 
+    let addNumberType (toType : ProvidedTypeDefinition) (n : int) =
+        let typeName = sprintf "N%d" n
+        let numberType = 
+            ProvidedTypeDefinition(typeName, Some typeof<obj>, IsErased = false)
+            |> addEmptyConstructor
+
+        if isPrime n
+        then numberType.AddInterfaceImplementation typeof<IPrime>
+        else numberType.AddInterfaceImplementation typeof<INum>
+
+        addValueProperty numberType n
+        toType.AddMemberDelayed (fun () -> numberType)
+
+
     do
         numbersProvider.DefineStaticParameters (
             parameters, 
             fun typeName args ->
-                let number =
+                let numbers =
                     args.[0] :?> string
-                    |> Int32.Parse
+                    |> fun s -> s.Split ([|','; ';'|])
+                    |> Array.map Int32.Parse
 
                 let templateType = 
                     ProvidedTypeDefinition(asm, ns, typeName, Some typeof<obj>, IsErased = false)
                     |> addEmptyConstructor
 
-                if isPrime number
-                then templateType.AddInterfaceImplementation typeof<IPrime>
-                else templateType.AddInterfaceImplementation typeof<INum>
+                numbers |> Seq.iter (addNumberType templateType)
 
-                addValueProperty templateType number
                 tempAsm.AddTypes [templateType]
                 templateType
             )
