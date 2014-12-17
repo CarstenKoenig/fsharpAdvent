@@ -2,75 +2,78 @@
 
 open System
 open System.Reflection
-open ProviderImplementation.ProvidedTypes
+
 open Microsoft.FSharp.Core.CompilerServices
+open Microsoft.FSharp.Quotations
 
-[<Interface>]
+open ProviderImplementation.ProvidedTypes
+
+[<InterfaceAttribute>]
 type INum =
-    abstract Value : int
+    interface
+    end
 
-[<Interface>]
+[<InterfaceAttribute>]
 type IPrime =
     inherit INum
 
-[<TypeProvider>]
-type PrimesProvider (config : TypeProviderConfig) as this =
-    inherit TypeProviderForNamespaces ()
 
+[<AutoOpen>]
+module NumberOperations =
     let isPrime n =
         if n = 1 then false else
         [2 .. n-1]
         |> Seq.takeWhile (fun d -> d*d <= n)
         |> Seq.forall    (fun d -> n % d <> 0)
 
-    let ns = "Numbers"
+[<TypeProvider>]
+type NumbersProvider (config : TypeProviderConfig) as this =
+    inherit TypeProviderForNamespaces ()
+
+    let ns  = "Numbers"
     let asm = Assembly.GetExecutingAssembly()
 
-    let inum      = ProvidedTypeDefinition(asm, ns, "INum", Some typeof<INum>)
-    let iprime    = ProvidedTypeDefinition(asm, ns, "IPrime", Some typeof<IPrime>)
+    let tempAsmPath = System.IO.Path.ChangeExtension(System.IO.Path.GetTempFileName(), ".dll")
+    let tempAsm     = ProvidedAssembly tempAsmPath
 
-    let provider =
-        let primesProvider = ProvidedTypeDefinition(asm, ns, "PrimesProvider", Some(typeof<obj>))
-        let parameters = [ProvidedStaticParameter("Numbers", typeof<string>)]
-        primesProvider.DefineStaticParameters (
-            parameters, 
-            (fun typeName args ->
-                let numbers =
-                    args.[0] :?> string
-                    |> (fun s -> s.Split([|','; ';'|]))
-                    |> List.ofArray
-                    |> List.map Int32.Parse
+    let addEmptyConstructor (t : ProvidedTypeDefinition) =
+        let ctor = ProvidedConstructor []
+        ctor.InvokeCode <- (fun _ -> <@@ () @@>)
+        t.AddMember ctor
+        t
 
-                let provider = ProvidedTypeDefinition(asm, ns, typeName, Some typeof<obj>, HideObjectMethods = true)
+    let numbersProvider = ProvidedTypeDefinition(asm, ns, "NumbersProvider", Some(typeof<obj>), IsErased = false)
+    let parameters      = [ ProvidedStaticParameter("Numbers", typeof<string>) ]
 
-                let createType (n : int) =
-                    let delay () =
-                        let name = sprintf "N%d" n
-
-                        let num       = ProvidedTypeDefinition(name, Some typeof<obj>)
-                        let valueProp = ProvidedProperty("Value", typeof<int>, IsStatic = false,
-                                                        GetterCode = (fun args -> <@@ n @@>))
-                        let ctor      = ProvidedConstructor([], InvokeCode = fun args -> <@@ () :> obj @@>)
-
-                        num.AddMemberDelayed(fun () -> valueProp)
-                        num.AddMemberDelayed(fun () -> ctor)
-
-                        let interfaces () =
-                            if isPrime n 
-                            then [inum :> Type; iprime :> Type]
-                            else [inum :> Type]
-
-                        num.AddInterfaceImplementationsDelayed(interfaces)
-                        num
-                    provider.AddMemberDelayed delay
-
-                numbers |> Seq.iter createType
-                provider
-            ))
-        primesProvider
+    let addValueProperty (numberType : ProvidedTypeDefinition) (n : int) =
+        let valueProp = ProvidedProperty("Value", typeof<int>, IsStatic = false,
+                                         GetterCode = (fun args -> <@@ n @@>))
+        numberType.AddMemberDelayed (fun () -> valueProp)
 
     do
-        this.AddNamespace(ns, [inum; iprime; provider])
+        numbersProvider.DefineStaticParameters (
+            parameters, 
+            fun typeName args ->
+                let number =
+                    args.[0] :?> string
+                    |> Int32.Parse
+
+                let templateType = 
+                    ProvidedTypeDefinition(asm, ns, typeName, Some typeof<obj>, IsErased = false)
+                    |> addEmptyConstructor
+
+                if isPrime number
+                then templateType.AddInterfaceImplementation typeof<IPrime>
+                else templateType.AddInterfaceImplementation typeof<INum>
+
+                addValueProperty templateType number
+                tempAsm.AddTypes [templateType]
+                templateType
+            )
+
+        this.RegisterRuntimeAssemblyLocationAsProbingFolder config
+        tempAsm.AddTypes [numbersProvider]
+        this.AddNamespace(ns, [numbersProvider])
 
 [<assembly:TypeProviderAssembly>]
 do ()
