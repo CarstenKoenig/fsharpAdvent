@@ -36,6 +36,8 @@ printfn "4 + 3 * 2 = %A" (modN 4 + modN 3 * modN 2 : Mod<N5>)
 
 // ho ho ho ... divide like rudolph
 printfn "4 / 3 = %A" (modF 4 / modF 3 : ModF<N5>)
+// = 4 / 3 = 3 (MOD 5)
 
 // if you are naughty uncomment this line:
 // printfn "4 / 3 = %A" (modF 4 / modF 3 : ModF<N4>)
+// -> error FS0001: The type 'N4' is not compatible with the type 'IPrime'
