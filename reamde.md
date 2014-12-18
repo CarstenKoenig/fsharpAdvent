@@ -1,4 +1,21 @@
 
+(*
+                                                       *
+     *                                                          *
+                                  *                  *        .--.
+      \/ \/  \/  \/                                        ./   /=*
+        \/     \/      *            *                ...  (_____)
+         \ ^ ^/                                       \ \_((^o^))-.     *
+         (o)(O)--)--------\.                           \   (   ) \  \._.
+         |    |  ||================((~~~~~~~~~~~~~~~~~))|   ( )   |     \
+          \__/             ,|        \. * * * * * * ./  (~~~~~~~~~~~)    \
+   *        ||^||\.____./|| |          \___________/     ~||~~~~|~'\____/ *
+            || ||     || || A            ||    ||          ||    |   jurcy
+     *      <> <>     <> <>          (___||____||_____)   ((~~~~~|   *
+
+*)
+
+
 ## What the type provider is doing:
 - it provides two interfaces `INum` and `IPrime` into `.Numbers`
 - it provides a *Provider* `PrimesProvider` you can give a list of numbers you are interested in "1,5,13" and returns a type with the prober nested types
