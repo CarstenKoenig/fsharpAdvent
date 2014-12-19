@@ -50,18 +50,18 @@ type NumbersProvider (config : TypeProviderConfig) as this =
     let tempAsmPath = System.IO.Path.ChangeExtension(System.IO.Path.GetTempFileName(), ".dll")
     let tempAsm     = ProvidedAssembly tempAsmPath
 
+    let numbersProvider = ProvidedTypeDefinition(asm, ns, "NumbersProvider", Some(typeof<obj>), IsErased = false)
+    let parameters      = [ ProvidedStaticParameter("Numbers", typeof<string>) ]
+
     let addEmptyConstructor (t : ProvidedTypeDefinition) =
         let ctor = ProvidedConstructor []
         ctor.InvokeCode <- (fun _ -> <@@ () @@>)
         t.AddMember ctor
         t
 
-    let numbersProvider = ProvidedTypeDefinition(asm, ns, "NumbersProvider", Some(typeof<obj>), IsErased = false)
-    let parameters      = [ ProvidedStaticParameter("Numbers", typeof<string>) ]
-
     let addValueProperty (numberType : ProvidedTypeDefinition) (n : int) =
         let valueProp = ProvidedProperty("Value", typeof<int>, IsStatic = false,
-                                         GetterCode = (fun args -> <@@ n @@>))
+                                            GetterCode = (fun args -> <@@ n @@>))
         numberType.AddMemberDelayed (fun () -> valueProp)
 
         let igetMeth = typeof<INum>.GetMethod "GetValue"
